@@ -1,0 +1,3 @@
+data <-  read.table("./NCDMORT3070.csv",
+                    header = TRUE,
+                    sep = ",")
