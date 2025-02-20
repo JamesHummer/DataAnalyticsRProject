@@ -1,3 +1,6 @@
+# Risk of premature death from the four target NCDs Data by WHO Region 
+# https://apps.who.int/gho/data/view.main.2485REG
+
 data <-  read.table("./NCDMORT3070.csv",
                     header = TRUE,
                     sep = ",")
