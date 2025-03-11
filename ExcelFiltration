@@ -4,3 +4,57 @@
 data <-  read.table("./NCDMORT3070.csv",
                     header = TRUE,
                     sep = ",")
+
+
+# Load necessary libraries
+library(tidyr)
+library(dplyr)
+library(ggplot2)
+library(pheatmap)
+
+# Preview the data
+head(data)
+
+# Drop rows with missing values
+data_clean <- data %>%
+  drop_na()
+
+# Convert categorical variables to factors (e.g., treatment, survival_status)
+data_clean$treatment <- as.factor(data_clean$treatment)
+data_clean$survival_status <- as.factor(data_clean$survival_status)
+
+# 2. Correlation Analysis (for gene expression)
+# Select numeric columns for correlation
+gene_data <- data_clean %>%
+  select(where(is.numeric))
+
+# Compute correlation matrix
+cor_matrix <- cor(gene_data, use = "complete.obs")
+
+# Plot heatmap of correlations
+pheatmap(cor_matrix, main = "Gene Expression Correlation", fontsize = 10)
+
+# 3. ANOVA - Compare survival rates across treatments
+anova_result <- aov(survival_time ~ treatment, data = data_clean)
+summary(anova_result)
+
+# 4. t-test - Compare survival time between two treatments (e.g., A vs B)
+# Filter data for two specific treatments
+data_ttest <- data_clean %>%
+  filter(treatment %in% c("A", "B"))
+
+t_test_result <- t.test(survival_time ~ treatment, data = data_ttest)
+print(t_test_result)
+
+# 5. Visualizations
+# Survival Time by Treatment (Boxplot)
+ggplot(data_clean, aes(x = treatment, y = survival_time, fill = treatment)) +
+  geom_boxplot() +
+  labs(title = "Survival Time by Treatment", x = "Treatment", y = "Survival Time") +
+  theme_minimal()
+
+# Survival Status Distribution by Treatment (Barplot)
+ggplot(data_clean, aes(x = treatment, fill = survival_status)) +
+  geom_bar(position = "fill") +
+  labs(title = "Survival Status by Treatment", x = "Treatment", y = "Proportion") +
+  theme_minimal()
