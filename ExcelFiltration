@@ -7,6 +7,10 @@ data <-  read.table("./NCDMORT3070.csv",
 
 
 # Load necessary libraries
+install.packages("tidyr")
+install.packages("dplyr")
+install.packages("ggplot2")
+install.packages("pheatmap")
 library(tidyr)
 library(dplyr)
 library(ggplot2)
@@ -14,47 +18,95 @@ library(pheatmap)
 
 # Preview the data
 head(data)
+colnames(data) <- c("Region", "Year", "Probability of dying 30-70", "Male Probability of dying 30-70", "Female Probability of Dying 30-70")
 
 # Drop rows with missing values
 data_clean <- data %>%
   drop_na()
 
 # Convert categorical variables to factors (e.g., treatment, survival_status)
-data_clean$treatment <- as.factor(data_clean$treatment)
-data_clean$survival_status <- as.factor(data_clean$survival_status)
+data_clean$Region <- as.factor(data_clean$Region)
+data_clean <- data_clean %>%
+  separate(`Probability of dying 30-70`, into = c("Average Probability of Dying 30-70", "Range"), sep = " \\[", extra = "drop", fill = "right") %>%
+  mutate(Range = as.numeric(Range)) #range didn't work but don't need it anyways
+
+
+data_clean <- data_clean %>%
+  slice(-1) #remove first row because it's extra descriptors not numbers
+
+data_clean <- data_clean %>%
+  mutate(
+    Region_Code = case_when(
+      Region == "Global" ~ 1,
+      Region == "Africa" ~ 2,
+      Region == "Americas" ~ 3,
+      Region == "South-East Asia" ~ 4,
+      Region == "Europe" ~ 5,
+      Region == "Eastern Mediterranean" ~ 6,
+      Region == "Western Pacific" ~ 7,
+    )
+  )
 
 # 2. Correlation Analysis (for gene expression)
+
+str(data_clean)
+
+data_clean$Region_Code <- as.numeric(data_clean$Region_Code)
+data_clean$`Average Probability of Dying 30-70` <- as.numeric(data_clean$`Average Probability of Dying 30-70`)
+
+data_clean <- data_clean %>%
+  select(-Range)
+
 # Select numeric columns for correlation
 gene_data <- data_clean %>%
   select(where(is.numeric))
 
-# Compute correlation matrix
-cor_matrix <- cor(gene_data, use = "complete.obs")
+# Create a contingency table (cross-tabulation) of region_code and Probability of dying 30-70
+contingency_table <- table(gene_data$Region_Code, gene_data$`Average Probability of Dying 30-70`)
 
-# Plot heatmap of correlations
-pheatmap(cor_matrix, main = "Gene Expression Correlation", fontsize = 10)
+sum(is.na(gene_data$Region_Code))  # Check for missing values in Region_Code
+sum(is.na(gene_data$`Probability of dying 30-70`))  # Check for missing values in Probability of dying 30-70
+
+str(gene_data$Region_Code)  # Check the structure of Region_Code
+str(gene_data$`Probability of dying 30-70`)  # Check the structure of Probability of dying 30-70
+
+# Perform the Chi-Square Test for Independence
+chi_square_result <- chisq.test(contingency_table)
+
+# Display the result of the test
+print(chi_square_result)
+
+# Check the expected frequencies to ensure the assumptions are met (at least 5 in each cell)
+print(chi_square_result$expected)
+
+# Check the p-value from the Chi-Square Test
+print(chi_square_result$p.value)
 
 # 3. ANOVA - Compare survival rates across treatments
-anova_result <- aov(survival_time ~ treatment, data = data_clean)
+anova_result <- aov(`Average Probability of Dying 30-70` ~ Region_Code, data = data_clean)
 summary(anova_result)
 
-# 4. t-test - Compare survival time between two treatments (e.g., A vs B)
+# 4. t-test - Compare survival time between two regions
 # Filter data for two specific treatments
-data_ttest <- data_clean %>%
-  filter(treatment %in% c("A", "B"))
+# Subset the data for Region_Code values 2 and 4
+subset_data <- gene_data[gene_data$Region_Code %in% c(2, 4), ]
 
-t_test_result <- t.test(survival_time ~ treatment, data = data_ttest)
+# Perform the T-test comparing the Average Probability of Dying 30-70 between Region_Code 2 and 4
+t_test_result <- t.test(`Average Probability of Dying 30-70` ~ Region_Code, data = subset_data)
+
+# Print the result of the T-test
 print(t_test_result)
 
+
 # 5. Visualizations
-# Survival Time by Treatment (Boxplot)
-ggplot(data_clean, aes(x = treatment, y = survival_time, fill = treatment)) +
-  geom_boxplot() +
-  labs(title = "Survival Time by Treatment", x = "Treatment", y = "Survival Time") +
-  theme_minimal()
+# Survival Time by Region (Boxplot)
+ggplot(data_clean, aes(x = Region, y = `Average Probability of Dying 30-70`, fill = Year)) +
+  geom_boxplot(size = 4) +
+  labs(title = "Proability of Survival by region, across years", x = "Region", y = "Probability of Dying 30-70")
+
 
 # Survival Status Distribution by Treatment (Barplot)
-ggplot(data_clean, aes(x = treatment, fill = survival_status)) +
+ggplot(data_clean, aes(x = X, fill = Probability.....of.dying.between.age.30.and.exact.age.70.from.any.of.cardiovascular.disease..cancer..diabetes..or.chronic.respiratory.disease)) +
   geom_bar(position = "fill") +
   labs(title = "Survival Status by Treatment", x = "Treatment", y = "Proportion") +
   theme_minimal()
