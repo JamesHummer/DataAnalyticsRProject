@@ -64,11 +64,6 @@ gene_data <- data_clean %>%
 # Create a contingency table (cross-tabulation) of region_code and Probability of dying 30-70
 contingency_table <- table(gene_data$Region_Code, gene_data$`Average Probability of Dying 30-70`)
 
-sum(is.na(gene_data$Region_Code))  # Check for missing values in Region_Code
-sum(is.na(gene_data$`Probability of dying 30-70`))  # Check for missing values in Probability of dying 30-70
-
-str(gene_data$Region_Code)  # Check the structure of Region_Code
-str(gene_data$`Probability of dying 30-70`)  # Check the structure of Probability of dying 30-70
 
 # Perform the Chi-Square Test for Independence
 chi_square_result <- chisq.test(contingency_table)
@@ -99,14 +94,16 @@ print(t_test_result)
 
 
 # 5. Visualizations
-# Survival Time by Region (Boxplot)
-ggplot(data_clean, aes(x = Region, y = `Average Probability of Dying 30-70`, fill = Year)) +
-  geom_boxplot(size = 4) +
-  labs(title = "Proability of Survival by region, across years", x = "Region", y = "Probability of Dying 30-70")
+# Probability of death by Region by year (point)
+ggplot(data_clean, aes(x = Region, y = `Average Probability of Dying 30-70`, color = as.factor(Year))) +
+  geom_point(size = 5, stroke = 0.5) +
+  labs(title = "Proability of Survival by region, Each Year", x = "Region", y = "Probability of Dying 30-70") +
+  theme_light()
 
-
-# Survival Status Distribution by Treatment (Barplot)
-ggplot(data_clean, aes(x = X, fill = Probability.....of.dying.between.age.30.and.exact.age.70.from.any.of.cardiovascular.disease..cancer..diabetes..or.chronic.respiratory.disease)) +
-  geom_bar(position = "fill") +
-  labs(title = "Survival Status by Treatment", x = "Treatment", y = "Proportion") +
+#probability of dying by region across 2000-2019 (Column) 
+#divide Y by 20 to get average Prob per region (each region had 20 entries)
+ggplot(data_clean, aes(x = Region, y = `Average Probability of Dying 30-70`/20, fill = Year)) +
+  geom_col() +  
+  labs(title = "Likelihood of Dying by Region 2000-2019", x = "Region", y = "% Average Probability of Dying 30-70") +
   theme_minimal()
+#Year for fill = year lets you see if any year in particular was an outlier in contributing to total average
